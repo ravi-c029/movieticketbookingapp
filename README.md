@@ -48,6 +48,29 @@ The local seed creates these evaluation accounts:
 
 It also creates two sample movies and upcoming shows. These predictable credentials are for local evaluation only; production seeding requires an administrator password supplied through environment variables.
 
+## Assignment flow coverage
+
+1. Customer sign-up and login, plus seeded customer/admin login: **Complete**.
+2. Browse movies and showtimes: **Complete**.
+3. View seat availability for a show: **Complete**.
+4. Hold up to six seats for five minutes: **Complete**.
+5. Simulated payment, confirmed booking, hold expiry, and protection against duplicate seat claims: **Complete**. Payment is a simulation; no real payment provider is connected.
+6. View a customer's bookings: **Complete**.
+7. Admin movie and show management, plus an admin booking list: **Complete**.
+8. Customer cancellation: **Not implemented (optional)**.
+9. Per-show occupancy and revenue reporting: **Not implemented (optional)**.
+10. Seat availability updates across sessions: **Complete**, using three-second polling.
+
+## Database design
+
+- `users` stores customer and administrator accounts; a user can own many `holds` and `bookings`.
+- `movies` has many `shows`; each show stores its start time and ticket price.
+- `holds` belongs to a user and show and expires after five minutes. `seat_claims` records each held or booked seat for a show.
+- `bookings` belongs to a user and show; `booking_seats` stores its seat labels. A booking can have payment records in `payments`.
+- `seat_claims` has a primary key on `(show_id, seat_label)`, so the same seat cannot be held/booked twice for one show. Expired holds can be reclaimed. Foreign keys connect each record to its owner or parent.
+
+Key implementation decisions: FastAPI exposes the API and React/TypeScript renders the booking flow. SQLite supports local development; PostgreSQL is used in production. SQL migrations keep both schemas aligned. Seat holds expire after five minutes, and a unique seat claim plus transactional booking conversion prevents two customers from confirming the same seat. Payment is simulated. The frontend polls seat availability every three seconds so other sessions' changes appear without keeping a server connection open.
+
 ## Deploy to Vercel
 
 1. Set the Vercel project Framework Preset to **Services**. Keep this repository root as the project root. `vercel.json` defines a Vite frontend service in `frontend/` and a FastAPI service in `backend/`.
