@@ -348,10 +348,10 @@ def get_movie(movie_id: str) -> dict[str, Any]:
             raise HTTPException(status_code=404, detail="Movie not found")
         now = iso(utc_now())
         shows = conn.execute("""SELECT s.*, m.duration_minutes,
-            ?-COUNT(sc.seat_label) AS available_seats
+            ?-(SELECT COUNT(*) FROM seat_claims sc
+                WHERE sc.show_id=s.id AND (sc.booking_id IS NOT NULL OR sc.expires_at>?)) AS available_seats
             FROM shows s JOIN movies m ON m.id=s.movie_id
-            LEFT JOIN seat_claims sc ON sc.show_id=s.id AND (sc.booking_id IS NOT NULL OR sc.expires_at>?)
-            WHERE s.movie_id=? AND s.starts_at>? GROUP BY s.id ORDER BY s.starts_at""", (SEAT_COUNT, now, movie_id, now)).fetchall()
+            WHERE s.movie_id=? AND s.starts_at>? ORDER BY s.starts_at""", (SEAT_COUNT, now, movie_id, now)).fetchall()
     return {"movie": movie_dict(movie), "shows": [movie_dict(row) for row in shows]}
 
 
