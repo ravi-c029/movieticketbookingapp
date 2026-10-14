@@ -13,7 +13,7 @@ os.environ["DATABASE_PATH"] = str(Path(_temp.name) / "test.sqlite3")
 
 from fastapi.testclient import TestClient
 
-from app import app, connect, hash_password, initialize_database, iso, utc_now
+from app import app, connect, hash_password, initialize_database, iso, provision_initial_admin, utc_now
 
 
 class ApiTests(unittest.TestCase):
@@ -57,6 +57,26 @@ class ApiTests(unittest.TestCase):
         wrong_password = self.client.post("/api/auth/login", json={"email":"ravi@example.com","password":"wrong-password"})
         self.assertEqual(wrong_password.status_code, 401)
         self.assertEqual(wrong_password.json()["detail"], "Email or password is incorrect")
+
+    def test_initial_admin_environment_credentials_are_provisioned(self) -> None:
+        old_email = os.environ.get("INITIAL_ADMIN_EMAIL")
+        old_password = os.environ.get("INITIAL_ADMIN_PASSWORD")
+        os.environ["INITIAL_ADMIN_EMAIL"] = "configured-admin@example.com"
+        os.environ["INITIAL_ADMIN_PASSWORD"] = "StrongTestPassword123!"
+        try:
+            provision_initial_admin()
+            response = self.client.post("/api/auth/login", json={"email": "configured-admin@example.com", "password": "StrongTestPassword123!"})
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.json()["user"]["role"], "admin")
+        finally:
+            if old_email is None:
+                os.environ.pop("INITIAL_ADMIN_EMAIL", None)
+            else:
+                os.environ["INITIAL_ADMIN_EMAIL"] = old_email
+            if old_password is None:
+                os.environ.pop("INITIAL_ADMIN_PASSWORD", None)
+            else:
+                os.environ["INITIAL_ADMIN_PASSWORD"] = old_password
 
     def test_auth_and_role_boundaries(self) -> None:
         self.assertEqual(self.client.post(f"/api/shows/{self.show['id']}/holds", json={"seats":["A1"]}).status_code, 401)

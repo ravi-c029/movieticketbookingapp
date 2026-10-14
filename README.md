@@ -75,17 +75,9 @@ Key implementation decisions: FastAPI exposes the API and React/TypeScript rende
 
 1. Set the Vercel project Framework Preset to **Services**. Keep this repository root as the project root. `vercel.json` defines a Vite frontend service in `frontend/` and a FastAPI service in `backend/`.
 2. Connect a managed PostgreSQL database (the Neon Marketplace resource is already attached to this project). Confirm `DATABASE_URL` is available to the backend service.
-3. Set a newly generated `JWT_SECRET` in Vercel Production Environment Variables. Do not reuse the local secret.
-4. Run `vercel --prod` from the repository root. FastAPI applies the PostgreSQL migration on startup. Seed an initial admin and sample catalog once if the database is empty.
-5. For initial production seeding, set `DATABASE_URL`, `INITIAL_ADMIN_EMAIL`, and `INITIAL_ADMIN_PASSWORD` in a secure local shell, then run:
-
-   ```powershell
-   cd backend
-   python -m pip install -r requirements.txt
-   python seed.py
-   ```
-
-   Use an admin password of at least 12 characters. Customers can register through the app. Keep production values out of source control and chat.
+3. Set a newly generated `JWT_SECRET` in Vercel Production Environment Variables. Set `INITIAL_ADMIN_EMAIL` and `INITIAL_ADMIN_PASSWORD` there too; use an admin password of at least 12 characters. Keep both admin variables scoped to Production.
+4. Run `vercel --prod` from the repository root. FastAPI applies the PostgreSQL migration on startup and creates or refreshes the configured admin account. Customers can register through the app.
+5. For a new empty database, run `backend/seed.py` from a trusted shell with the Production `DATABASE_URL`, `JWT_SECRET`, `INITIAL_ADMIN_EMAIL`, and `INITIAL_ADMIN_PASSWORD` set in that shell. This also creates the sample catalog. Keep production values out of source control and chat.
 
 ## Realtime seat availability
 

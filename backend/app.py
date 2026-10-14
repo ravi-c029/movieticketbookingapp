@@ -291,6 +291,23 @@ app = FastAPI(title="Yozigo Movie Tickets API", version="1.0.0")
 app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("CORS_ORIGINS", "http://localhost:5173").split(","), allow_credentials=False, allow_methods=["GET", "POST", "PUT", "DELETE"], allow_headers=["Authorization", "Content-Type"])
 
 
+def provision_initial_admin() -> None:
+    email = os.environ.get("INITIAL_ADMIN_EMAIL", "").strip().lower()
+    password = os.environ.get("INITIAL_ADMIN_PASSWORD", "")
+    if not email and not password:
+        return
+    if not email or len(password) < 12:
+        raise RuntimeError("Set both INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD (at least 12 characters)")
+
+    with transaction(lock_key=99183018 if USE_POSTGRES else None) as conn:
+        existing = conn.execute("SELECT id FROM users WHERE email=?", (email,)).fetchone()
+        password_hash = hash_password(password)
+        if existing:
+            conn.execute("UPDATE users SET name=?,password_hash=?,role='admin' WHERE id=?", ("Cinema Admin", password_hash, existing["id"]))
+        else:
+            conn.execute("INSERT INTO users(id,name,email,password_hash,role,created_at) VALUES(?,?,?,?,?,?)", (str(uuid.uuid4()), "Cinema Admin", email, password_hash, "admin", iso(utc_now())))
+
+
 @app.on_event("startup")
 def startup() -> None:
     if len(JWT_SECRET) < 32:
@@ -298,6 +315,7 @@ def startup() -> None:
     if os.environ.get("VERCEL_ENV") in {"production", "preview"} and not USE_POSTGRES:
         raise RuntimeError("DATABASE_URL must point to PostgreSQL on Vercel; serverless files are not persistent")
     initialize_database()
+    provision_initial_admin()
 
 
 @app.get("/api/health")

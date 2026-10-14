@@ -26,8 +26,15 @@ def seed() -> None:
     now = utc_now()
     with connect() as conn:
         for name, email, password, role in accounts:
-            insert_user = "INSERT INTO users(id,name,email,password_hash,role,created_at) VALUES(?,?,?,?,?,?) ON CONFLICT(id) DO NOTHING" if USE_POSTGRES else "INSERT OR IGNORE INTO users(id,name,email,password_hash,role,created_at) VALUES(?,?,?,?,?,?)"
-            conn.execute(insert_user, (str(uuid.uuid5(uuid.NAMESPACE_URL, email)), name, email, hash_password(password), role, iso(now)))
+            values = (str(uuid.uuid5(uuid.NAMESPACE_URL, email)), name, email, hash_password(password), role, iso(now))
+            if USE_POSTGRES:
+                conn.execute(
+                    "INSERT INTO users(id,name,email,password_hash,role,created_at) VALUES(?,?,?,?,?,?) "
+                    "ON CONFLICT(email) DO UPDATE SET name=excluded.name,password_hash=excluded.password_hash,role=excluded.role",
+                    values,
+                )
+            else:
+                conn.execute("INSERT OR IGNORE INTO users(id,name,email,password_hash,role,created_at) VALUES(?,?,?,?,?,?)", values)
         existing = conn.execute("SELECT COUNT(*) count FROM movies").fetchone()["count"]
         if existing == 0:
             movie_ids = [str(uuid.uuid4()), str(uuid.uuid4())]
