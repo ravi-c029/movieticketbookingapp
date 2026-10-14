@@ -295,7 +295,7 @@ app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("CORS_ORIGINS", 
 def startup() -> None:
     if len(JWT_SECRET) < 32:
         raise RuntimeError("JWT_SECRET must contain at least 32 characters; copy .env.example to .env")
-    if os.environ.get("VERCEL") and not USE_POSTGRES:
+    if os.environ.get("VERCEL_ENV") in {"production", "preview"} and not USE_POSTGRES:
         raise RuntimeError("DATABASE_URL must point to PostgreSQL on Vercel; serverless files are not persistent")
     initialize_database()
 

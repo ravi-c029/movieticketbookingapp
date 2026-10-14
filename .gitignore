@@ -2,6 +2,7 @@
 .env.*
 !.env.example
 .vercel/
+.vite/
 .venv/
 __pycache__/
 *.py[cod]
@@ -9,3 +10,5 @@ backend/*.sqlite3
 node_modules/
 dist/
 *.tsbuildinfo
+
+.vercel
